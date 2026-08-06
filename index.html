@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Truy vấn Nhập hàng 1688</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding-top: 80px;
+            padding-bottom: 40px;
+        }
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background-color: #2c3e50;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            z-index: 1000;
+            letter-spacing: 0.5px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+        .widget-panel {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .card-widget {
+            flex: 1;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid #3498db;
+        }
+        .card-widget.total-money {
+            border-left-color: #e67e22;
+        }
+        .card-widget.status-alert {
+            border-left-color: #2ecc71;
+        }
+        .widget-title {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .widget-value {
+            font-size: 1.35rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .widget-subtext {
+            font-size: 0.75rem;
+            color: #95a5a6;
+            margin-top: 3px;
+        }
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .product-item {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        /* 💡 THÊM MỚI: CSS bôi nền màu cam nhạt khi có biến động */
+        .product-item.has-changed {
+            background-color: #fff9f1; /* Màu nền cam nhạt nhẹ nhàng */
+            border: 1px solid #ffdfb4; /* Viền màu cam nhạt */
+        }
+        
+        .product-left {
+            width: 160px;
+            min-width: 160px;
+            background-color: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #e2e8f0;
+            padding: 10px;
+        }
+        /* Đồng bộ màu nền bên trái khi hàng bị biến động */
+        .product-item.has-changed .product-left {
+            background-color: #fff5e6;
+            border-right: 1px solid #ffdfb4;
+        }
+        .product-left img {
+            max-width: 100%;
+            max-height: 140px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        .no-img {
+            font-size: 0.8rem;
+            color: #bdc3c7;
+            text-align: center;
+        }
+        .product-right {
+            flex: 1;
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+        .info-row {
+            display: flex;
+            line-height: 1.4;
+            font-size: 0.95rem;
+        }
+        .info-label {
+            width: 140px;
+            min-width: 140px;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+        .info-val {
+            color: #2c3e50;
+            word-break: break-word;
+        }
+        .info-val.product-name {
+            font-weight: bold;
+            color: #1a202c;
+        }
+        .info-val a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .info-val a:hover {
+            text-decoration: underline;
+        }
+        .highlight-orange {
+            color: #e67e22;
+            font-weight: bold;
+        }
+        .highlight-bold {
+            font-weight: bold;
+        }
+        
+        /* 💡 THÊM MỚI: Thanh thông báo dòng chữ biến động chi tiết cụ thể */
+        .change-badge {
+            background-color: #ffebd2;
+            color: #d35400;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #ffcc8d;
+            width: fit-content;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.2rem;
+        }
+		
+		/* 📱 CẤU HÌNH RESPONSIVE: Tự động tối ưu giao diện trên thiết bị di động */
+@media (max-width: 600px) {
+    body {
+        padding-top: 70px; /* Thu nhỏ khoảng cách đầu trang một chút */
+    }
+    
+    header {
+        font-size: 1.1rem; /* Thu nhỏ cỡ chữ tiêu đề để không bị tràn dòng */
+        padding: 0 10px;
+        text-align: center;
+    }
+
+    .widget-panel {
+        flex-direction: column; /* Chuyển 2 khung nổi thành 2 dòng */
+        gap: 10px;
+    }
+
+    .product-item {
+        flex-direction: column; /* 💡 QUAN TRỌNG: Chuyển bố cục sản phẩm từ Ngang thành Dọc */
+    }
+
+    .product-left {
+        width: 100%; /* Chiếm toàn bộ chiều ngang */
+        min-width: 100%;
+        padding: 15px;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0; /* Chuyển viền phải thành viền dưới */
+        background-color: #fafafa;
+    }
+
+    .product-item.has-changed .product-left {
+        border-right: none;
+        border-bottom: 1px solid #ffdfb4;
+    }
+
+    .product-left img {
+        max-height: 180px; /* Cho phép ảnh hiển thị to và rõ ràng hơn trên điện thoại */
+    }
+
+    .product-right {
+        padding: 15px; /* Thu hẹp padding một chút cho thoáng màn hình */
+    }
+
+    .info-row {
+        font-size: 0.9rem; /* Giảm nhẹ cỡ chữ để hiển thị vừa vặn */
+    }
+
+    .info-label {
+        width: 110px; /* Thu hẹp độ rộng của nhãn tiếng Trung để nhường chỗ cho giá trị */
+        min-width: 110px;
+    }
+    
+    .change-badge {
+        width: 100%; /* Khung thông báo biến động trải dài hết chiều ngang */
+        text-align: left;
+    }
+}
+    </style>
+</head>
+<body>
+
+    <header id="provider-title">正在调用供应商信息...</header>
+
+    <div class="container">
+        <div class="widget-panel">
+            <div class="card-widget total-money">
+                <div class="widget-title">总额 (Tổng tiền nhập hàng)</div>
+                <div class="widget-value highlight-orange" id="total-amount">0.00 ¥</div>
+                <div class="widget-subtext">筛选预购数量 > 0的产品</div>
+            </div>
+            <div class="card-widget status-alert" id="status-card">
+                <div class="widget-title">数据状态 (Biến động dữ liệu)</div>
+                <div class="widget-value" id="data-status">正在检查...</div>
+                <div class="widget-subtext" id="sync-time">更新于: --:--:--</div>
+            </div>
+        </div>
+
+        <div id="main-content" class="product-list">
+            <div class="loading">正在调用数据...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                // 1. Đọc file meta trạng thái tổng quan
+                const metaResponse = await fetch('data/meta.json?t=' + new Date().getTime());
+                if (metaResponse.ok) {
+                    const meta = await metaResponse.json();
+                    document.getElementById('provider-title').innerText = `供应商: ${meta.provider || 'N/A'} (预购名单)`;
+                    document.getElementById('data-status').innerText = meta.status || 'Không xác định';
+                    document.getElementById('sync-time').innerText = `更新于: ${meta.last_updated || 'N/A'}`;
+                    
+                    const statusCard = document.getElementById('status-card');
+                    if (meta.status === "数据有改变（Dữ liệu có thay đổi）") {
+                        statusCard.style.borderLeftColor = "#e67e22"; // Cam đậm cảnh báo biến động
+                    } else if (meta.status === "保持数据（Không thay đổi）") {
+                        statusCard.style.borderLeftColor = "#2ecc71";
+                    }
+                }
+
+                // 2. Đọc file danh sách sản phẩm chính thức có đính tag thông tin thay đổi
+                const prodResponse = await fetch('data/products.json?t=' + new Date().getTime());
+                if (!prodResponse.ok) throw new Error("Không thể tải danh sách sản phẩm");
+                
+                const products = await prodResponse.json();
+                const container = document.getElementById('main-content');
+                container.innerHTML = '';
+
+                if (products.length === 0) {
+                    container.innerHTML = '<div class="loading">Không tìm thấy sản phẩm nào có số lượng đặt lớn hơn 0.</div>';
+                    return;
+                }
+
+                let totalCNY = 0;
+
+                products.forEach(item => {
+                    totalCNY += (item.qty * item.price);
+
+                    let imageHTML = `<div class="no-img">Không có ảnh</div>`;
+                    if (item.image && item.image.startsWith('http')) {
+                        imageHTML = `<img src="${item.image}" alt="Sản phẩm 1688" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\'no-img\'>Lỗi tải ảnh</div>';">`;
+                    }
+
+                    const linkHTML = (item.link && item.link !== "#") 
+                        ? `<a href="${item.link}" target="_blank">点击访问 (Xem Sản Phẩm)</a>` 
+                        : `<span style="color:#95a5a6;font-style:italic;">Không có liên kết</span>`;
+
+                    // 💡 CẢI TIẾN LOGIC: Kiểm tra nếu sản phẩm có biến động (new hoặc qty_changed)
+                    let changeBadgeHTML = '';
+                    let itemClassModifier = '';
+                    
+                    if (item.change_status && item.change_status !== 'none') {
+                        itemClassModifier = 'has-changed'; // Thêm class để bôi nền màu cam nhạt
+                        changeBadgeHTML = `<div class="change-badge">⚠️ ${item.change_msg}</div>`; // Tạo khung chữ thông báo cụ thể
+                    }
+
+                    const itemHTML = `
+                        <div class="product-item ${itemClassModifier}">
+                            <div class="product-left">
+                                ${imageHTML}
+                            </div>
+                            <div class="product-right">
+                                ${changeBadgeHTML}
+                                <div class="info-row">
+                                    <div class="info-label">序号 (STT):</div>
+                                    <div class="info-val highlight-bold">${item.no}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">品名 (Tên sản phẩm):</div>
+                                    <div class="info-val product-name">${item.name || '<span style="color:#b2bec3;font-style:italic;">Trống</span>'}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">产品链接 (Liên kết):</div>
+                                    <div class="info-val">${linkHTML}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">预购数量 (Số lượng):</div>
+                                    <div class="info-val highlight-bold">${item.qty}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">价格 (Giá nhập):</div>
+                                    <div class="info-val highlight-orange">${item.price ? item.price.toFixed(2) + ' ¥' : '0.00 ¥'}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += itemHTML;
+                });
+
+                document.getElementById('total-amount').innerText = totalCNY.toFixed(2) + ' ¥';
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('main-content').innerHTML = `<div class="loading" style="color:#e74c3c;">Đã xảy ra lỗi hệ thống khi phân tích dữ liệu cấu trúc: ${error.message}</div>`;
+            }
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
